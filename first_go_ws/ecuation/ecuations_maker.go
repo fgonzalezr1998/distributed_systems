@@ -46,7 +46,7 @@ func print_complex_res(a, b float64, sqrt_arg float64) {
   real_part = float32(-b / (2.0 * a))
   imag_part = float32(math.Sqrt(sqrt_arg))
 
-  fmt.Println(real_part, " + ", imag_part, "j", ", ", real_part, " - ", imag_part)
+  fmt.Printf("%g + %gj, %g - %gj\n", real_part, imag_part, real_part, imag_part)
 }
 
 func print_result(a, b, c float64) {
@@ -72,7 +72,7 @@ func print_result(a, b, c float64) {
 
 // Trial Consts:
 
-const A, B, C float64 = 1.0, 4.0, 0.0
+const A, B, C float64 = 2.0, 2.0, 1.0
 
 func main() {
   fmt.Print("Result: ")
