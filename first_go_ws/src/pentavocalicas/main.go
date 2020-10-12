@@ -8,6 +8,8 @@ import(
 	"fmt"
 	"os"
 	"bufio"
+	"strings"
+	pvlcas "my_pkgs/pentavocalicas"
 )
 
 func read_n_cases(n_words * int) bool {
@@ -25,29 +27,70 @@ func read_n_cases(n_words * int) bool {
 }
 
 func is_petavocalic(str string) bool {
-	return true
+	var a, e, i, o, u bool
+	
+	s := strings.ToUpper(str)
+
+	for _, c := range s {
+
+		if (!a) {
+			a = c == 'A'
+		}
+		if (!e) {
+			e = c == 'E'
+		}
+		if (!i) {
+			i = c == 'I'
+		}
+		if (!o) {
+			o = c == 'O'
+		}
+		if (!u) {
+			u = c == 'U'
+		}
+	}
+	
+	return a && e && i && o && u
 }
 
-func print_if_pentavocalics(items int) {
+func print_if_pentavocalics(l * pvlcas.WordsListType) {
 
-	var str string
+	var success bool
 
-	reader := bufio.NewReader(os.Stdin)
+	str := l.Pop(&success)
 
-	for i := 0; i < items ; i++ {
-		str, _ = reader.ReadString('\n')
+	for success{
 
 		if (is_petavocalic(str)) {
 			fmt.Println("SI")
 		} else {
 			fmt.Println("NO")
 		}
+
+		str = l.Pop(&success)
 	}
 
 }
 
+func read_words(l * pvlcas.WordsListType, items int) {
+	var str string
+
+	reader := bufio.NewReader(os.Stdin)
+
+	for i := 0; i < items; i++ {
+		str, _ = reader.ReadString('\n')
+		str = str[:len(str) - 1]
+		l.Push(str)
+	}
+}
+
 func main() {
 	var n_words int
+	var list pvlcas.WordsListType
+
+	list.First = nil
+
+	pvlcas.Who()
 
 	// Read number of trial cases:
 
@@ -57,7 +100,8 @@ func main() {
 
 	// Read words and print if they are pentavocalics:
 
-	print_if_pentavocalics(n_words)
+	read_words(&list, n_words)
+	print_if_pentavocalics(&list)
 
 	os.Exit(0)
 }
