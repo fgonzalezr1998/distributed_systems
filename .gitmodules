@@ -1,0 +1,3 @@
+[submodule "book_src/gopl.io"]
+	path = book_src/gopl.io
+	url = https://github.com/adonovan/gopl.io/
