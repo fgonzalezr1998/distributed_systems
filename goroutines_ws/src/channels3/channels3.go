@@ -1,3 +1,9 @@
+/*
+ * Program to demostrate that you can not know previusly
+ * if one data received by a channel corresponds to the
+ * first goroutine launched or to the second one
+ */
+
 package main
 
 import(
