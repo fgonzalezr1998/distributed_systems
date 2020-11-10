@@ -16,18 +16,7 @@ import (
 	"./broadcaster_lib"
 )
 
-//!+broadcaster
-// 'chan<-' is an only-write channel
-/*
-type client chan<- string // an outgoing message channel
-
-var (
-	entering = make(chan client)
-	leaving  = make(chan client)
-	messages = make(chan string) // all incoming client messages
-)
-*/
-func broadcaster(broadcast broadcaster_lib.BroadcastType) {
+func broadcaster(broadcast * broadcaster_lib.BroadcastType) {
 	clients := make(map[broadcaster_lib.ClientChannelType]bool) // all connected clients
 	for {
 		select {
@@ -51,7 +40,7 @@ func broadcaster(broadcast broadcaster_lib.BroadcastType) {
 //!-broadcaster
 
 //!+handleConn
-func handleConn(conn net.Conn, broadcast broadcaster_lib.BroadcastType) {
+func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 	ch := make(chan string) // outgoing client messages
 	go clientWriter(conn, ch)
 
@@ -59,6 +48,9 @@ func handleConn(conn net.Conn, broadcast broadcaster_lib.BroadcastType) {
 	ch <- "You are " + who
 	broadcast.Messages <- who + " has arrived"
 	broadcast.Entering <- ch
+
+	broadcast.AddClient(who)
+	broadcast.PrintConnectedClients()
 
 	input := bufio.NewScanner(conn)
 	for input.Scan() {
@@ -81,7 +73,7 @@ func clientWriter(conn net.Conn, ch <-chan string) {
 
 //!+main
 func main() {
-	var broadcast broadcaster_lib.BroadcastType
+	var broadcast * broadcaster_lib.BroadcastType = new(broadcaster_lib.BroadcastType)
 	broadcast.Init()
 	listener, err := net.Listen("tcp", "localhost:8000")
 	if err != nil {
