@@ -1,10 +1,10 @@
-// Copyright © 2016 Alan A. A. Donovan & Brian W. Kernighan.
-// License: https://creativecommons.org/licenses/by-nc-sa/4.0/
+// Copyright © 2020
+// License: APACHE
+// Author: Fernando González <fergonzaramos@yahoo.es>
 
-// See page 254.
-//!+
-
-// Chat is a server that lets clients chat with each other
+/*
+ * Chat is a server that lets clients chat with each other
+ */
 
 package main
 
@@ -13,11 +13,12 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"./broadcaster_lib"
 )
 
 //!+broadcaster
 // 'chan<-' is an only-write channel
-
+/*
 type client chan<- string // an outgoing message channel
 
 var (
@@ -25,22 +26,22 @@ var (
 	leaving  = make(chan client)
 	messages = make(chan string) // all incoming client messages
 )
-
-func broadcaster() {
-	clients := make(map[client]bool) // all connected clients
+*/
+func broadcaster(broadcast broadcaster_lib.BroadcastType) {
+	clients := make(map[broadcaster_lib.ClientChannelType]bool) // all connected clients
 	for {
 		select {
-		case msg := <-messages:
+		case msg := <-broadcast.Messages:
 			// Broadcast incoming message to all
 			// clients' outgoing message channels.
 			for cli := range clients {
 				cli <- msg
 			}
 
-		case cli := <-entering:
+		case cli := <-broadcast.Entering:
 			clients[cli] = true
 
-		case cli := <-leaving:
+		case cli := <-broadcast.Leaving:
 			delete(clients, cli)
 			close(cli)
 		}
@@ -50,23 +51,23 @@ func broadcaster() {
 //!-broadcaster
 
 //!+handleConn
-func handleConn(conn net.Conn) {
+func handleConn(conn net.Conn, broadcast broadcaster_lib.BroadcastType) {
 	ch := make(chan string) // outgoing client messages
 	go clientWriter(conn, ch)
 
 	who := conn.RemoteAddr().String()
 	ch <- "You are " + who
-	messages <- who + " has arrived"
-	entering <- ch
+	broadcast.Messages <- who + " has arrived"
+	broadcast.Entering <- ch
 
 	input := bufio.NewScanner(conn)
 	for input.Scan() {
-		messages <- who + ": " + input.Text()
+		broadcast.Messages <- who + ": " + input.Text()
 	}
 	// NOTE: ignoring potential errors from input.Err()
 
-	leaving <- ch
-	messages <- who + " has left"
+	broadcast.Leaving <- ch
+	broadcast.Messages <- who + " has left"
 	conn.Close()
 }
 
@@ -80,19 +81,21 @@ func clientWriter(conn net.Conn, ch <-chan string) {
 
 //!+main
 func main() {
+	var broadcast broadcaster_lib.BroadcastType
+	broadcast.Init()
 	listener, err := net.Listen("tcp", "localhost:8000")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	go broadcaster()
+	go broadcaster(broadcast)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			log.Print(err)
 			continue
 		}
-		go handleConn(conn)
+		go handleConn(conn, broadcast)
 	}
 }
 
