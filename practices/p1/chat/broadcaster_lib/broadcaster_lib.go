@@ -34,7 +34,6 @@ func (b * BroadcastType) AddClient(id string) {
 	new_client.client_id = id
 
 	b.clients_list.connected = append(b.clients_list.connected, new_client)
-
 	b.clients_list.disconnected = deleteById(b.clients_list.disconnected, id)
 }
 
