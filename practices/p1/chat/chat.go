@@ -13,8 +13,25 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"io"
+	"os"
+	"os/signal"
+	"syscall"
 	"./broadcaster_lib"
 )
+
+func sigtermHandler(listener net.Listener) {
+	c := make(chan os.Signal)
+
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func(c chan os.Signal, listener net.Listener) {
+		<-c
+		io.WriteString(os.Stdout, "[INFO] Server exited cleanly\n")
+
+		listener.Close()
+		os.Exit(0)
+	}(c, listener)
+}
 
 func broadcaster(broadcast * broadcaster_lib.BroadcastType) {
 	clients := make(map[broadcaster_lib.ClientChannelType]bool) // all connected clients
@@ -29,8 +46,18 @@ func broadcaster(broadcast * broadcaster_lib.BroadcastType) {
 
 		case cli := <-broadcast.Entering:
 			clients[cli] = true
+			fmt.Println("Conected:")
+			broadcast.PrintConnectedClients()
+			fmt.Println("Disconnected")
+			broadcast.PrintDisconnectedClients()
+			fmt.Println("**************")
 
 		case cli := <-broadcast.Leaving:
+			fmt.Println("Conected:")
+			broadcast.PrintConnectedClients()
+			fmt.Println("Disconnected")
+			broadcast.PrintDisconnectedClients()
+			fmt.Println("**************")
 			delete(clients, cli)
 			close(cli)
 		}
@@ -45,12 +72,14 @@ func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 	go clientWriter(conn, ch)
 
 	who := conn.RemoteAddr().String()
+
+	// Add the new client to the clients list:
+
+	broadcast.AddClient(who)
+
 	ch <- "You are " + who
 	broadcast.Messages <- who + " has arrived"
 	broadcast.Entering <- ch
-
-	broadcast.AddClient(who)
-	broadcast.PrintConnectedClients()
 
 	input := bufio.NewScanner(conn)
 	for input.Scan() {
@@ -58,9 +87,14 @@ func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 	}
 	// NOTE: ignoring potential errors from input.Err()
 
+	conn.Close()
+
+	// Remove the client from teh clients list:
+
+	broadcast.DeleteClient(who)
+
 	broadcast.Leaving <- ch
 	broadcast.Messages <- who + " has left"
-	conn.Close()
 }
 
 func clientWriter(conn net.Conn, ch <-chan string) {
@@ -79,6 +113,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	sigtermHandler(listener)
 
 	go broadcaster(broadcast)
 	for {
