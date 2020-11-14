@@ -44,13 +44,13 @@ func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 	
 	// Add the new client to the clients list:
 
-	broadcast.AddClient(who, ch)
+	go broadcast.AddClient(who, ch)
 
 	broadcast.SendBroadcast(who, who + " has arrived")
 
 	// Announce the new list:
 
-	broadcast.AnnounceClients()
+	go broadcast.AnnounceClients()
 
 	input := bufio.NewScanner(conn)
 	for input.Scan() {
@@ -62,10 +62,10 @@ func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 
 	// Remove the client from teh clients list:
 
-	broadcast.DeleteClient(who)
+	go broadcast.DeleteClient(who)
 
-	broadcast.Leaving <- ch
-	broadcast.SendBroadcast(who, who + " has left")
+	// broadcast.Leaving <- ch
+	go broadcast.SendBroadcast(who, who + " has left")
 }
 
 func clientWriter(conn net.Conn, ch <-chan string) {

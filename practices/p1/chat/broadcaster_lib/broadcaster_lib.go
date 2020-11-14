@@ -2,6 +2,7 @@ package broadcaster_lib
 
 import (
 	"fmt"
+	"log"
 )
 
 type ClientType struct {
@@ -30,7 +31,7 @@ func (b * BroadcastType) Init() {
 	b.Leaving = make(chan ClientChannelType)
 	b.Messages = make(chan string)
 
-	go b.broadcaster()
+	// go b.broadcaster()
 }
 
 func (b * BroadcastType) AddClient(id string, c chan<- string) {
@@ -46,7 +47,13 @@ func (b * BroadcastType) AddClient(id string, c chan<- string) {
 func (b * BroadcastType) DeleteClient(id string) {
 	var client ClientType
 
-	client.client_id = id
+	if (!b.getClient(id, &client)) {
+		log.Print("[ERROR] Client doesn't exist!\n")
+	}
+
+	// Close its channel before to delete it:
+
+	close(client.channel)
 
 	b.clients_list.connected = deleteById(b.clients_list.connected, id)
 	b.clients_list.disconnected = append(b.clients_list.disconnected, client)
@@ -82,7 +89,7 @@ func (b BroadcastType) PrintDisconnectedClients() {
 }
 
 // Private functions:
-
+/*
 func (b * BroadcastType) broadcaster() {
 	for {
 		select {
@@ -91,7 +98,7 @@ func (b * BroadcastType) broadcaster() {
 		}
 	}
 }
-
+*/
 func deleteById(l []ClientType, id string) (list []ClientType) {
 	list = l
 	for index, value := range l {
@@ -107,4 +114,14 @@ func deleteById(l []ClientType, id string) (list []ClientType) {
 func removeIndex(l []ClientType, index int) (list [] ClientType) {
 	list = append(l[:index], l[index+1:]...)
 	return list
+}
+
+func (b BroadcastType) getClient(id string, client * ClientType) bool {
+	for _, value := range b.clients_list.connected {
+		if (value.client_id == id) {
+			*client = value
+			return true
+		}
+	}
+	return false
 }
