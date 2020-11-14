@@ -33,6 +33,23 @@ func sigtermHandler(listener net.Listener) {
 	}(c, listener)
 }
 
+func getUsername(conn net.Conn) string {
+	var input *bufio.Scanner
+	var username string
+
+	fmt.Fprint(conn, "Introduce a username: ")
+
+	input = bufio.NewScanner(conn)
+	for input.Scan() {
+		username = input.Text()
+		if (username != "") {
+			break
+		}
+	}
+
+	return username
+}
+
 //!+handleConn
 func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 	ch := make(chan string) // outgoing client messages
@@ -40,13 +57,15 @@ func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 
 	who := conn.RemoteAddr().String()
 
-	ch <- "You are " + who
+	username := getUsername(conn)
+
+	ch <- "You are " + username
 	
 	// Add the new client to the clients list:
 
-	go broadcast.AddClient(who, ch)
+	broadcast.AddClient(who, username, ch)
 
-	broadcast.SendBroadcast(who, who + " has arrived")
+	broadcast.SendBroadcast(who, "[" + username + "]" + " has arrived")
 
 	// Announce the new list:
 
@@ -54,7 +73,7 @@ func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 
 	input := bufio.NewScanner(conn)
 	for input.Scan() {
-		broadcast.SendBroadcast("", who + ": " + input.Text())
+		broadcast.SendBroadcast("", username + ": " + input.Text())
 	}
 	// NOTE: ignoring potential errors from input.Err()
 
@@ -62,10 +81,9 @@ func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 
 	// Remove the client from teh clients list:
 
-	go broadcast.DeleteClient(who)
+	broadcast.DeleteClient(who)
 
-	// broadcast.Leaving <- ch
-	go broadcast.SendBroadcast(who, who + " has left")
+	go broadcast.SendBroadcast(who, "[" + username + "]" + " has left")
 }
 
 func clientWriter(conn net.Conn, ch <-chan string) {

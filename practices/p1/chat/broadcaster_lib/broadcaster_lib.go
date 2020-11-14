@@ -7,6 +7,7 @@ import (
 
 type ClientType struct {
 	client_id string
+	username string
 	channel ClientChannelType
 }
 
@@ -23,11 +24,12 @@ type BroadcastType struct {
 
 // Public Functions:
 
-func (b * BroadcastType) AddClient(id string, c chan<- string) {
+func (b * BroadcastType) AddClient(id string, username string, c chan<- string) {
 	var new_client ClientType
 
 	new_client.client_id = id
 	new_client.channel = c
+	new_client.username = username
 
 	b.clients_list.connected = append(b.clients_list.connected, new_client)
 	b.clients_list.disconnected = deleteById(b.clients_list.disconnected, id)
@@ -51,7 +53,7 @@ func (b * BroadcastType) DeleteClient(id string) {
 func (b * BroadcastType) AnnounceClients() {
 	var str string = "Connected Clients:\n"
 	for _, value := range b.clients_list.connected {
-		str = str + value.client_id + "\n"
+		str = str + value.username + "\n"
 	}
 
 	b.SendBroadcast("", str)
@@ -67,7 +69,7 @@ func (b * BroadcastType) SendBroadcast(sender, msg string) {
 
 func (b BroadcastType) PrintConnectedClients() {
 	for _, value := range b.clients_list.connected {
-		fmt.Println(value.client_id)
+		fmt.Println(value.client_id + ":" + value.username)
 	}
 }
 
