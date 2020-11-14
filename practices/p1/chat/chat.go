@@ -54,7 +54,7 @@ func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 
 	input := bufio.NewScanner(conn)
 	for input.Scan() {
-		broadcast.Messages <- who + ": " + input.Text()
+		broadcast.SendBroadcast("", who + ": " + input.Text())
 	}
 	// NOTE: ignoring potential errors from input.Err()
 
