@@ -33,39 +33,6 @@ func sigtermHandler(listener net.Listener) {
 	}(c, listener)
 }
 
-func broadcaster(broadcast * broadcaster_lib.BroadcastType) {
-	clients := make(map[broadcaster_lib.ClientChannelType]bool) // all connected clients
-	for {
-		select {
-		case msg := <-broadcast.Messages:
-			// Broadcast incoming message to all
-			// clients' outgoing message channels.
-			for cli := range clients {
-				cli <- msg
-			}
-
-		case cli := <-broadcast.Entering:
-			clients[cli] = true
-			fmt.Println("Conected:")
-			broadcast.PrintConnectedClients()
-			fmt.Println("Disconnected")
-			broadcast.PrintDisconnectedClients()
-			fmt.Println("**************")
-
-		case cli := <-broadcast.Leaving:
-			fmt.Println("Conected:")
-			broadcast.PrintConnectedClients()
-			fmt.Println("Disconnected")
-			broadcast.PrintDisconnectedClients()
-			fmt.Println("**************")
-			delete(clients, cli)
-			close(cli)
-		}
-	}
-}
-
-//!-broadcaster
-
 //!+handleConn
 func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 	ch := make(chan string) // outgoing client messages
@@ -73,13 +40,17 @@ func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 
 	who := conn.RemoteAddr().String()
 
+	ch <- "You are " + who
+	
 	// Add the new client to the clients list:
 
-	broadcast.AddClient(who)
+	broadcast.AddClient(who, ch)
 
-	ch <- "You are " + who
-	broadcast.Messages <- who + " has arrived"
-	broadcast.Entering <- ch
+	broadcast.SendBroadcast(who, who + " has arrived")
+
+	// Announce the new list:
+
+	broadcast.AnnounceClients()
 
 	input := bufio.NewScanner(conn)
 	for input.Scan() {
@@ -94,7 +65,7 @@ func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 	broadcast.DeleteClient(who)
 
 	broadcast.Leaving <- ch
-	broadcast.Messages <- who + " has left"
+	broadcast.SendBroadcast(who, who + " has left")
 }
 
 func clientWriter(conn net.Conn, ch <-chan string) {
@@ -108,7 +79,6 @@ func clientWriter(conn net.Conn, ch <-chan string) {
 //!+main
 func main() {
 	var broadcast * broadcaster_lib.BroadcastType = new(broadcaster_lib.BroadcastType)
-	broadcast.Init()
 	listener, err := net.Listen("tcp", "localhost:8000")
 	if err != nil {
 		log.Fatal(err)
@@ -116,7 +86,9 @@ func main() {
 
 	sigtermHandler(listener)
 
-	go broadcaster(broadcast)
+	broadcast.Init()
+
+	// go broadcaster(broadcast)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
