@@ -22,15 +22,7 @@ type BroadcastType struct {
 }
 
 // Public Functions:
-/*
-func (b * BroadcastType) Init() {
-	b.Entering = make(chan ClientChannelType)
-	b.Leaving = make(chan ClientChannelType)
-	b.Messages = make(chan string)
 
-	// go b.broadcaster()
-}
-*/
 func (b * BroadcastType) AddClient(id string, c chan<- string) {
 	var new_client ClientType
 
@@ -86,16 +78,7 @@ func (b BroadcastType) PrintDisconnectedClients() {
 }
 
 // Private functions:
-/*
-func (b * BroadcastType) broadcaster() {
-	for {
-		select {
-		case cli := <-b.Leaving:
-			close(cli)
-		}
-	}
-}
-*/
+
 func deleteById(l []ClientType, id string) (list []ClientType) {
 	list = l
 	for index, value := range l {
