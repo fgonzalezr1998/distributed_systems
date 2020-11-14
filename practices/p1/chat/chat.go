@@ -86,8 +86,6 @@ func main() {
 
 	sigtermHandler(listener)
 
-	broadcast.Init()
-
 	// go broadcaster(broadcast)
 	for {
 		conn, err := listener.Accept()

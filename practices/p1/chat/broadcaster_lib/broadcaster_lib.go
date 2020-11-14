@@ -18,14 +18,11 @@ type ClientsListType struct {
 type ClientChannelType chan<- string // Write-only channel
 
 type BroadcastType struct {
-	Entering chan ClientChannelType
-	Leaving chan ClientChannelType
-	Messages chan string
 	clients_list ClientsListType
 }
 
 // Public Functions:
-
+/*
 func (b * BroadcastType) Init() {
 	b.Entering = make(chan ClientChannelType)
 	b.Leaving = make(chan ClientChannelType)
@@ -33,7 +30,7 @@ func (b * BroadcastType) Init() {
 
 	// go b.broadcaster()
 }
-
+*/
 func (b * BroadcastType) AddClient(id string, c chan<- string) {
 	var new_client ClientType
 
