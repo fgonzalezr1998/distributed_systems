@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"strings"
 	"./broadcaster_lib"
 )
 
@@ -33,21 +34,57 @@ func sigtermHandler(listener net.Listener) {
 	}(c, listener)
 }
 
-func getUsername(conn net.Conn) string {
+func getUsername(conn net.Conn, b * broadcaster_lib.BroadcastType) string {
 	var input *bufio.Scanner
 	var username string
 
-	fmt.Fprint(conn, "Introduce a username: ")
+	fmt.Fprint(conn, "[SERVER] Introduce a username: ")
 
 	input = bufio.NewScanner(conn)
 	for input.Scan() {
 		username = input.Text()
-		if (username != "") {
+		if (username != "" && !b.Exists(username)) {
 			break
+		} else {
+			fmt.Fprint(conn, "[SERVER] Username invalid or already in use. Try other: ")
 		}
 	}
 
 	return username
+}
+
+func privateChanRequested(tags []string) bool {
+	return len(tags) == 2 && tags[0] == "priv" 
+}
+
+func exitPrivChanRequested(m string) bool {
+	return m == "end priv"
+}
+
+func sendMsg(c chan string, b * broadcaster_lib.BroadcastType, id, username, msg string) {
+	var tags []string
+	var output_user string
+
+	tags = strings.Split(msg, " ")
+
+	if (privateChanRequested(tags)) {
+		b.SetPrivateChan(id, tags[1])
+		c <- "[SERVER] Tu exit the private channel, type: 'end priv'"
+		b.SendBroadcast(id, "[SERVER] " + username + " is in a private channel")
+		return
+	}
+
+	if (exitPrivChanRequested(msg)) {
+		b.SetPrivateChan(id, "")
+		b.SendBroadcast(id, "[SERVER] " + username + " is in the public channel")
+		return
+	}
+
+	if (b.IsInPrivate(id, &output_user)) {
+		b.SendTo(output_user, username + ": " + msg)
+	} else {
+		b.SendBroadcast(id, username + ": " + msg)
+	}
 }
 
 //!+handleConn
@@ -57,15 +94,16 @@ func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 
 	who := conn.RemoteAddr().String()
 
-	username := getUsername(conn)
+	username := getUsername(conn, broadcast)
 
-	ch <- "You are " + username
+	ch <- "[SERVER] You are " + username
+	ch <- "[SERVER] If you want to open a private channel with a username, type: 'priv [username]'"
 	
 	// Add the new client to the clients list:
 
 	broadcast.AddClient(who, username, ch)
 
-	broadcast.SendBroadcast(who, "[" + username + "]" + " has arrived")
+	broadcast.SendBroadcast(who, "[SERVER] " + "[" + username + "]" + " has arrived")
 
 	// Announce the new list:
 
@@ -73,7 +111,8 @@ func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 
 	input := bufio.NewScanner(conn)
 	for input.Scan() {
-		broadcast.SendBroadcast("", username + ": " + input.Text())
+		str := input.Text()
+		sendMsg(ch, broadcast, who, username, str)
 	}
 	// NOTE: ignoring potential errors from input.Err()
 
@@ -83,7 +122,7 @@ func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 
 	broadcast.DeleteClient(who)
 
-	go broadcast.SendBroadcast(who, "[" + username + "]" + " has left")
+	go broadcast.SendBroadcast(who, "[SERVER] " + "[" + username + "]" + " has left")
 }
 
 func clientWriter(conn net.Conn, ch <-chan string) {
