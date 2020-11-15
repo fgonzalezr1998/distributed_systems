@@ -69,7 +69,7 @@ func sendMsg(c chan string, b * broadcaster_lib.BroadcastType, id, username, msg
 
 	if (privateChanRequested(tags)) {
 		b.SetPrivateChan(id, tags[1])
-		c <- "[SERVER] Tu exit the private channel, type: 'end priv'"
+		c <- "[SERVER] To exit the private channel, type: 'end priv'"
 		b.SendBroadcast(id, "[SERVER] " + username + " is in a private channel")
 		return
 	}
