@@ -116,7 +116,10 @@ func handleConn(conn net.Conn, broadcast * broadcaster_lib.BroadcastType) {
 	}
 	// NOTE: ignoring potential errors from input.Err()
 
-	conn.Close()
+	err := conn.Close()
+	if (err != nil) {
+		log.Print(err)
+	}
 
 	// Remove the client from teh clients list:
 
