@@ -22,6 +22,10 @@ import (
 )
 
 func sigtermHandler(listener net.Listener) {
+	/*
+	 * CTRL+C Callback
+	 */
+
 	c := make(chan os.Signal)
 
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -81,7 +85,7 @@ func sendMsg(c chan string, b * broadcaster_lib.BroadcastType, id, username, msg
 	}
 
 	if (b.IsInPrivate(id, &output_user)) {
-		b.SendTo(output_user, username + ": " + msg)
+		b.SendTo(output_user, username + " [by private]: " + msg)
 	} else {
 		b.SendBroadcast(id, username + ": " + msg)
 	}
