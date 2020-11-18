@@ -1,0 +1,23 @@
+1.- Contenido:
+	El contenido se trata de un programa en Go llamado
+	'chat.go', el cual contiene el punto de entrada 'main'
+	y un paquete denominado 'broadcaster_lib' cuyo fichero
+	fuente ('broadcaster_lib.go') se encuentra dentro del
+	directorio que recibe el mismo nombre.
+
+2.- Cómo ejecutar:
+	Para ejecutar el servidor del chat, no resulta necesario
+	configurar ninguna variable de entorno de Go. basta con
+	compilar haciendo "$ go build chat.go" y, posteriormente,
+	ejecutar con el comando "$ ./chat".
+
+	*NOTA: El directorio 'broadcaster_lib' ha de encontrarse
+	a la misma altura que el fichero 'chat.go', esto es, en la
+	misma ruta.
+
+	Por último, en otra terminal (en la misma máquina o en otra
+	que tenga conexión tcp con la que ejecuta el servidor) lanza
+	tantos clientes como consideres con el comando
+	"$ nc [ip_server] 8000", donde 'ip_server' es la IP de la
+	máquina que está ejecutando el servidor del chat. Si se
+	encuentra en el mismo PC, basta con indicar "$ nc localhost 8000"
