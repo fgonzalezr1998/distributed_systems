@@ -1,0 +1,16 @@
+Variables:
+	Nº de exploradores: N = 7;
+	Nº de raciones de estofado por explorador: M = 5;
+	Nº de caníbales: C = 9;
+
+Consideraciones:
+	El tiempo que se tarda en cocinar cada explorador oscila
+	ALEATORIAMENTE entre 1 y 2 segundos.
+
+	Inicialmente, la marmita está vacía.
+
+	Un caníbal tarda un tiempo aleatorio en comer, que oscila
+	ALEATORIAMENTE entre 0.5 y 1 segundo.
+
+	Después de comer, el caníbal hace otras tareas y pasa un tiempo
+	ALEATORIO entre 0.5 y 2 segundos en volver a comer.
