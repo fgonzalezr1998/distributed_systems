@@ -162,7 +162,7 @@ func launchCannibals(tribe * TribeType, mutex * sync.RWMutex) {
 	}
 }
 
-func waitForEnd(tribe * TribeType, mutex * sync.RWMutex) {
+func waitForEnd(tribe * TribeType) {
 	for {
 		select {
 			case <- tribe.end_ch:
@@ -179,5 +179,5 @@ func main() {
 
 	launchCannibals(tribe, &mutex)
 
-	waitForEnd(tribe, &mutex)
+	waitForEnd(tribe)
 }
