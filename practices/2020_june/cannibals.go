@@ -113,9 +113,9 @@ func cannibal(tribe * TribeType, mutex * sync.RWMutex) {
 	 */
 
 	var eat_st, state int32
-	var eating, working bool = false, false
 	var t0 time.Time
 	var t2s float64
+	var eating, working bool
 	eat_st = 0
 	
 	state = eat_st
