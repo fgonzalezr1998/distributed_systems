@@ -1,0 +1,15 @@
+*Numero de Elfos:
+  D = 12;
+
+* Los renos van llegando con un intervalo aleatorio de al menos 5s:
+  I >= 5s;
+
+* Cada elfo, fabrica un juguete.
+
+* 1 de cada 3 juguetes, da problemas:
+  fp = 33%;
+
+* Santa Claus invierte entre 2 y 5s en ayudar a un equipo con problemas:
+  H = [2, 5];
+
+* Si Santa Calus no tiene nada que hacer, duerme.
