@@ -25,7 +25,6 @@ const MaxHelpTime = 5.0
 type SantaClausType struct {
 	is_working bool;
 	elf_ch chan struct{}	// Channel so that the elves can warn Santa
-	reindeer_ch chan struct{}	// Channel so that the reindeer can warn Santa
 }
 
 type ElveType struct {
@@ -43,13 +42,58 @@ type ToyFactoryType struct {
 func (sc SantaClausType) init() {
 	sc.is_working = false
 	sc.elf_ch = make(chan struct{})
-	sc.reindeer_ch = make(chan struct{})
 }
 
-func (tf * ToyFactoryType) initElves() {
+func (elve * ElveType) toyFails() (failure bool) {
+	failure = rand.Int31n(100) <= FailurePercentage
+	return failure
+}
+
+func (elve * ElveType) work(mutex * sync.RWMutex) {
+	if (elve.toyFails()) {
+		elve.is_working = false
+		mutex.Lock()
+		elve.problems = true
+		mutex.Unlock()
+		fmt.Println("[WARN] Toy Failed!")
+	} else {
+		fmt.Println("[INFO] Toy Success!")
+	}
+}
+
+func (elve * ElveType) waitForHelp(mutex * sync.RWMutex) {
+	var problems bool
+
+	mutex.RLock()
+	problems = elve.problems
+	mutex.RUnlock()
+
+	if (!problems) {
+		elve.is_working = true
+	}
+}
+
+func (elve * ElveType) run_behavior(mutex * sync.RWMutex) {
+	elve.is_working = true
+	for {
+		if (elve.is_working) {
+			elve.work(mutex)
+		} else {
+			elve.waitForHelp(mutex)
+		}
+	}
+}
+
+func (tf * ToyFactoryType) initElves(mutex * sync.RWMutex) {
 	for i := 0; i < NElves; i++ {
+		// Init one elve:
+
 		tf.elves[i].problems = false
 		tf.elves[i].is_working = false
+
+		// Run its behavior:
+
+		go tf.elves[i].run_behavior(mutex)
 	}
 }
 
@@ -66,16 +110,7 @@ func (tf * ToyFactoryType) waitForReindeer(m * sync.RWMutex) {
 	}
 }
 
-func (tf * ToyFactoryType) init(mutex * sync.RWMutex) {
-	tf.santa_claus.init()
-	tf.initElves()
-	tf.reindeer_available = 0
-	tf.time_to_deal_ch = make(chan struct{}, 1)
-
-	go tf.waitForReindeer(mutex)
-}
-
-func reindeer_behavior(tf * ToyFactoryType, mutex * sync.RWMutex) {
+func (tf * ToyFactoryType)reindeer_behavior(mutex * sync.RWMutex) {
 	// When 'waiting_time' has finished, the reindeer arrives
 
 	var waiting_time float64
@@ -96,10 +131,20 @@ func reindeer_behavior(tf * ToyFactoryType, mutex * sync.RWMutex) {
 	mutex.Unlock()
 }
 
-func run_reindeer_behavior(tf * ToyFactoryType, mutex * sync.RWMutex) {
+func (tf * ToyFactoryType)run_reindeer_behavior(mutex * sync.RWMutex) {
 	for i := 0; i < NReindeer; i++ {
-		reindeer_behavior(tf, mutex)
+		tf.reindeer_behavior(mutex)
 	}
+}
+
+func (tf * ToyFactoryType) init(mutex * sync.RWMutex) {
+	tf.santa_claus.init()
+	tf.initElves(mutex)
+	tf.reindeer_available = 0
+	tf.time_to_deal_ch = make(chan struct{}, 1)
+
+	go tf.run_reindeer_behavior(mutex)
+	go tf.waitForReindeer(mutex)
 }
 
 func wait_for_end(time_to_deal_ch chan struct{}, mutex * sync.RWMutex) {
@@ -116,8 +161,6 @@ func main() {
 	var mutex sync.RWMutex
 
 	toy_factory.init(&mutex)	// Initialize the Toy Factory
-
-	go run_reindeer_behavior(toy_factory, &mutex)
 
 	wait_for_end(toy_factory.time_to_deal_ch, &mutex)
 
