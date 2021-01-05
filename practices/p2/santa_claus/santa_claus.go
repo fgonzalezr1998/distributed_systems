@@ -22,6 +22,9 @@ const FailurePercentage = 33  // 33%
 const MinHelpTime = 2.0
 const MaxHelpTime = 5.0
 
+const MinBuildTime = 3.0
+const MaxBuildTime = 8.0
+
 type SantaClausType struct {
 	is_working bool;
 	elf_ch chan struct{}	// Channel so that the elves can warn Santa
@@ -49,16 +52,17 @@ func (elve * ElveType) toyFails() (failure bool) {
 	return failure
 }
 
-func (elve * ElveType) work(mutex * sync.RWMutex) {
+func (elve * ElveType) work(mutex * sync.RWMutex) bool {
 	if (elve.toyFails()) {
 		elve.is_working = false
 		mutex.Lock()
 		elve.problems = true
 		mutex.Unlock()
 		fmt.Println("[WARN] Toy Failed!")
-	} else {
-		fmt.Println("[INFO] Toy Success!")
+		return false
 	}
+
+	return true
 }
 
 func (elve * ElveType) waitForHelp(mutex * sync.RWMutex) {
@@ -74,10 +78,26 @@ func (elve * ElveType) waitForHelp(mutex * sync.RWMutex) {
 }
 
 func (elve * ElveType) run_behavior(mutex * sync.RWMutex) {
+	var working bool
+	var t0 time.Time
+	var t2s float64
+
 	elve.is_working = true
+	working = false
 	for {
 		if (elve.is_working) {
-			elve.work(mutex)
+			if (!working) {
+				t2s = MinBuildTime + rand.Float64() *
+					(MaxBuildTime - MinBuildTime)
+				t0 = time.Now()
+				working = elve.work(mutex)
+			}
+			if (working) {
+				if (time.Since(t0).Seconds() >= t2s) {
+					fmt.Println("[INFO] Toy Success!")
+					working = false
+				}
+			}
 		} else {
 			elve.waitForHelp(mutex)
 		}
