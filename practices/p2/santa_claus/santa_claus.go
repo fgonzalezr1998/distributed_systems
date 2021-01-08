@@ -25,9 +25,11 @@ const MaxHelpTime = 5.0
 const MinBuildTime = 3.0
 const MaxBuildTime = 8.0
 
+const ElvesGroup = 3
+
 type SantaClausType struct {
 	is_working bool;
-	elf_ch chan struct{}	// Channel so that the elves can warn Santa
+	elv_ch chan struct{}	// Channel so that the elves can warn Santa
 }
 
 type ElveType struct {
@@ -44,7 +46,22 @@ type ToyFactoryType struct {
 
 func (sc SantaClausType) init() {
 	sc.is_working = false
-	sc.elf_ch = make(chan struct{})
+	sc.elv_ch = make(chan struct{})
+}
+
+func (sc SantaClausType) wakeUp(mutex * sync.RWMutex) {
+	var working bool
+
+	mutex.RLock()
+	working = sc.is_working
+	mutex.RUnlock()
+
+	if (!working) {
+		mutex.Lock()
+		sc.is_working = true
+		mutex.Unlock()
+		sc.elv_ch <- struct{}{}
+	}
 }
 
 func (elve * ElveType) toyFails() (failure bool) {
@@ -100,6 +117,30 @@ func (elve * ElveType) run_behavior(mutex * sync.RWMutex) {
 			}
 		} else {
 			elve.waitForHelp(mutex)
+		}
+	}
+}
+
+func (tf * ToyFactoryType) toysListener(mutex * sync.RWMutex) {
+	var elves [NElves]ElveType
+	var elves_with_problems int32
+	for {
+		mutex.RLock()
+		elves = tf.elves
+		mutex.RUnlock()
+
+		elves_with_problems = 0
+		for _, elve := range elves {
+			if (elve.problems) {
+				elves_with_problems++
+			}
+		}
+		
+		if (elves_with_problems >= ElvesGroup) {
+			// Wake up to santa if it is sleeping:
+
+			fmt.Println("Wake up Santa!")
+			tf.santa_claus.wakeUp(mutex)
 		}
 	}
 }
@@ -165,6 +206,7 @@ func (tf * ToyFactoryType) init(mutex * sync.RWMutex) {
 
 	go tf.run_reindeer_behavior(mutex)
 	go tf.waitForReindeer(mutex)
+	go tf.toysListener(mutex)
 }
 
 func wait_for_end(time_to_deal_ch chan struct{}, mutex * sync.RWMutex) {
