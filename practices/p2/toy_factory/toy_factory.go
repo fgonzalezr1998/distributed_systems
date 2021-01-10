@@ -60,7 +60,6 @@ func (elf * ElfType) waitForHelp(mutex * sync.RWMutex) {
 }
 
 func (tf * ToyFactoryType) helpToElves(mutex * sync.RWMutex) {
-	// var t0 time.Time
 	var t2s float64
 	var elves [NElves]ElfType
 	var counter int32
