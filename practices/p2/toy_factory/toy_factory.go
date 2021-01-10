@@ -60,7 +60,7 @@ func (elf * ElfType) waitForHelp(mutex * sync.RWMutex) {
 }
 
 func (tf * ToyFactoryType) helpToElves(mutex * sync.RWMutex) {
-	var t0 time.Time
+	// var t0 time.Time
 	var t2s float64
 	var elves [NElves]ElfType
 	var counter int32
@@ -72,13 +72,9 @@ func (tf * ToyFactoryType) helpToElves(mutex * sync.RWMutex) {
 	fmt.Println("[SANTA] Working!")
 
 	t2s = MinHelpTime + rand.Float64() * (MaxHelpTime - MinHelpTime)
-	t0 = time.Now()
-	for {
-		if (time.Since(t0).Seconds() >= t2s) {
-			fmt.Println("[SANTA] Toy checked!")
-			break
-		}
-	}
+
+	time.Sleep(time.Duration(t2s) * time.Second)
+	fmt.Println("[SANTA] Toy checked!")
 
 	// Delete 'ElvesGroup' elves from problems:
 
@@ -188,21 +184,16 @@ func (tf * ToyFactoryType) initElves(mutex * sync.RWMutex) {
 	}
 }
 
-func (tf * ToyFactoryType)reindeerBehavior(mutex * sync.RWMutex) {
+func (tf * ToyFactoryType) reindeerBehavior(mutex * sync.RWMutex) {
 	// When 'waiting_time' has finished, the reindeer arrives
 
 	var waiting_time float64
-	var t0 time.Time
-	var finish bool
 
 	waiting_time = MinReindeerInterval +
 		rand.Float64() * (MaxReindeerInterval - MinReindeerInterval)
 
-	finish = false
-	t0 = time.Now()
-	for !finish {
-		finish = time.Since(t0).Seconds() >= waiting_time
-	}
+	time.Sleep(time.Duration(waiting_time) * time.Second)
+
 	fmt.Println("***Reindeer Arrived!***")
 	tf.reindeer_available++
 	if (tf.reindeer_available == NReindeer) {
