@@ -27,7 +27,7 @@ const MaxBuildTime = 8.0
 
 const ElvesGroup = 3
 
-type ElveType struct {
+type ElfType struct {
 	problems bool
 	is_working bool
 	mutex * sync.RWMutex
@@ -35,18 +35,18 @@ type ElveType struct {
 
 type ToyFactoryType struct {
 	santa_claus santa_claus.SantaClausType
-	elves [NElves]ElveType
+	elves [NElves]ElfType
 	reindeer_available int32
 	elves_with_problems int32
 	Time_to_deal_ch chan struct{}
 }
 
-func (elf * ElveType) toyFails() (failure bool) {
+func (elf * ElfType) toyFails() (failure bool) {
 	failure = rand.Int31n(100) <= FailurePercentage
 	return failure
 }
 
-func (elf * ElveType) waitForHelp(mutex * sync.RWMutex) {
+func (elf * ElfType) waitForHelp(mutex * sync.RWMutex) {
 	var problems bool
 
 	elf.mutex.RLock()
@@ -62,7 +62,7 @@ func (elf * ElveType) waitForHelp(mutex * sync.RWMutex) {
 func (tf * ToyFactoryType) helpToElves(mutex * sync.RWMutex) {
 	var t0 time.Time
 	var t2s float64
-	var elves [NElves]ElveType
+	var elves [NElves]ElfType
 	var counter int32
 
 	// Wait for finish the current job:
@@ -122,7 +122,7 @@ func (tf * ToyFactoryType) runSantaBehavior(mutex * sync.RWMutex) {
 	}
 }
 
-func (tf * ToyFactoryType) elfDoWork(elf * ElveType, mutex * sync.RWMutex) bool {
+func (tf * ToyFactoryType) elfDoWork(elf * ElfType, mutex * sync.RWMutex) bool {
 	if (elf.toyFails()) {
 		fmt.Println("[WARN] Toy Failed!")
 		elf.is_working = false
@@ -146,7 +146,7 @@ func (tf * ToyFactoryType) elfDoWork(elf * ElveType, mutex * sync.RWMutex) bool 
 	return true
 }
 
-func (tf * ToyFactoryType) runElfBehavior(elf * ElveType,
+func (tf * ToyFactoryType) runElfBehavior(elf * ElfType,
 	mutex * sync.RWMutex) {
 	var working bool
 	var t0 time.Time
