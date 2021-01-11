@@ -15,15 +15,18 @@ const NReindeer = 9
 
 const MinReindeerInterval = 5.0
 const MaxReindeerInterval = 8.0  // My choice
-const FailurePercentage = 33  // 33%
 
 // Interval time Santa Claus spend helping with a toy
 
 const MinHelpTime = 2.0
 const MaxHelpTime = 5.0
 
+// Interval time that one elf spend building one toy
+
 const MinBuildTime = 5.0
 const MaxBuildTime = 8.0
+
+const FailurePercentage = 33  // 33%
 
 const ElvesGroup = 3
 

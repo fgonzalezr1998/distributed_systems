@@ -38,16 +38,7 @@ func (sc * SantaClausType) WaitForFinish() {
 	 * ¡BLOCKING CALL! Wait until Santa finish all his tasks
 	 */
 
-	var working bool
-
-	for {
-		sc.mutex.RLock()
-		working = sc.is_working
-		sc.mutex.RUnlock()
-		if (!working) {
-			break
-		}
-	}
+	for sc.IsWorking(){}
 }
 
 func (sc * SantaClausType) SetWorking(isworking bool) {
