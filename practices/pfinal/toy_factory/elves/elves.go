@@ -23,21 +23,22 @@ type ElfType struct {
 	battalion int32
 	mutex * sync.RWMutex
 }
-
+/*
 type ElfLeaderType struct {
 	// 'true' for occupied and 'false' for empty
 
 	main_store CacheType
 }
-
+*/
 type ElvesBattalionType struct{
-	leader ElfLeaderType
+	// leader ElfLeaderType
 	Elves [NElvesBattalion - 1]ElfType
 	cache CacheType
 }
 
 type ElvesType struct {
 	Battalions [NElvesBattalions] ElvesBattalionType
+	main_store CacheType
 }
 
 /*
@@ -47,8 +48,9 @@ type ElvesType struct {
  */
 
 func (elves * ElvesType) Init() {
+	elves.main_store.setAll(true)
 	for i := 0; i < NElvesBattalions ; i++ {
-		elves.Battalions[i].initBattalion(i)
+		elves.Battalions[i].initBattalion(int32(i))
 	}
 }
 
@@ -86,18 +88,11 @@ func (elf * ElfType) IsWorking() bool {
  */
 
 func (battalion * ElvesBattalionType) initBattalion(n_bat int32)  {
-	initLeader(&battalion.leader)
 	initElves(battalion.Elves[:], n_bat)
 
 	// Initialize the battalion cache as empty:
 
 	battalion.cache.setAll(false)
-}
-
-func initLeader(leader * ElfLeaderType) {
-	// Initialize the main store as full:
-
-	leader.main_store.setAll(true)
 }
 
 func initElves(elves [] ElfType, n_bat int32) {
