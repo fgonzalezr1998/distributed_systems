@@ -2,6 +2,7 @@ package elves
 
 import(
 	"sync"
+	"fmt"
 )
 
 const NElvesBattalion = 16    // Number of elves per battalion
@@ -9,37 +10,111 @@ const NElvesBattalions = 2    // We have two elves battalions
 
 // Main store configuration:
 
-const CacheTypeRows = 3;
-const CacheTypeCols = 30;
-
-type CacheTypeColsType struct {
-	cols [CacheTypeCols] bool
-}
+const CacheRows = 3;
+const CacheCols = 30;
 
 type CacheType struct {
-	rows [CacheTypeRows] CacheTypeColsType
+	elems [CacheRows][CacheCols] bool
 }
 
 type ElfType struct {
 	problems bool
 	is_working bool
+	battalion int32
 	mutex * sync.RWMutex
 }
 
 type ElfLeaderType struct {
+	// 'true' for occupied and 'false' for empty
+
 	main_store CacheType
 }
 
 type ElvesBattalionType struct{
 	leader ElfLeaderType
-	elves [NElvesBattalion - 1]ElfType
+	Elves [NElvesBattalion - 1]ElfType
 	cache CacheType
 }
 
 type ElvesType struct {
-	battalions [NElvesBattalions] ElvesBattalionType
+	Battalions [NElvesBattalions] ElvesBattalionType
 }
 
-func (battalion * ElvesBattalionType) Init() {
-	
+/*
+ **********************
+ * EXPORTED FUNCTIONS *
+ **********************
+ */
+
+func (elves * ElvesType) Init() {
+	for i := 0; i < NElvesBattalions ; i++ {
+		elves.Battalions[i].initBattalion(i)
+	}
+}
+
+func (elf * ElfType) WaitForHelp(mutex * sync.RWMutex) {
+	var problems bool
+
+	elf.mutex.RLock()
+	problems = elf.problems
+	elf.mutex.RUnlock()
+
+	if (!problems) {
+		elf.is_working = true
+		fmt.Println("[ELF] Back to work!")
+	}
+}
+
+func (elf * ElfType) SetWorking(working bool) {
+	elf.is_working = working;
+}
+
+func (elf * ElfType) SetProblems(problems bool) {
+	elf.mutex.Lock()
+	elf.problems = problems
+	elf.mutex.Unlock()
+}
+
+func (elf * ElfType) IsWorking() bool {
+	return elf.is_working
+}
+
+/*
+ ************************
+ * UNEXPORTED FUNCTIONS *
+ ************************
+ */
+
+func (battalion * ElvesBattalionType) initBattalion(n_bat int32)  {
+	initLeader(&battalion.leader)
+	initElves(battalion.Elves[:], n_bat)
+
+	// Initialize the battalion cache as empty:
+
+	battalion.cache.setAll(false)
+}
+
+func initLeader(leader * ElfLeaderType) {
+	// Initialize the main store as full:
+
+	leader.main_store.setAll(true)
+}
+
+func initElves(elves [] ElfType, n_bat int32) {
+	for i := 0; i < NElvesBattalion; i++ {
+		// Init one elve:
+
+		elves[i].mutex = new(sync.RWMutex)
+		elves[i].problems = false
+		elves[i].is_working = false
+		elves[i].battalion = n_bat
+	}
+}
+
+func (cache * CacheType) setAll(occupied bool) {
+	for i := 0; i < CacheRows; i++ {
+		for j := 0; j < CacheCols; j++ {
+			cache.elems[i][j] = occupied
+		}
+	}
 }

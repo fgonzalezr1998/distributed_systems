@@ -38,27 +38,14 @@ type ToyFactoryType struct {
 	Time_to_deal_ch chan struct{}
 }
 
-func (elf * ElfType) toyFails() (failure bool) {
+func toyFails() (failure bool) {
 	failure = rand.Int31n(100) <= FailurePercentage
 	return failure
 }
 
-func (elf * ElfType) waitForHelp(mutex * sync.RWMutex) {
-	var problems bool
-
-	elf.mutex.RLock()
-	problems = elf.problems
-	elf.mutex.RUnlock()
-
-	if (!problems) {
-		elf.is_working = true
-		fmt.Println("[ELF] Back to work!")
-	}
-}
-
 func (tf * ToyFactoryType) helpToElves(mutex * sync.RWMutex) {
 	var t2s float64
-	var elves [NElves]ElfType
+	var elves [elves.NElvesBattalion]elves.ElfType
 	var counter int32
 
 	// Wait for finish the current job:
@@ -114,13 +101,12 @@ func (tf * ToyFactoryType) runSantaBehavior(mutex * sync.RWMutex) {
 	}
 }
 
-func (tf * ToyFactoryType) elfDoWork(elf * ElfType, mutex * sync.RWMutex) bool {
-	if (elf.toyFails()) {
+func (tf * ToyFactoryType) elfDoWork(
+	elf * elves.ElfType, mutex * sync.RWMutex) bool {
+	if (toyFails()) {
 		fmt.Println("[WARN] Toy Failed!")
-		elf.is_working = false
-		elf.mutex.Lock()
-		elf.problems = true
-		elf.mutex.Unlock()
+		elf.SetWorking(false)
+		elf.SetProblems(true)
 
 		mutex.Lock()
 		tf.elves_with_problems++
@@ -138,16 +124,16 @@ func (tf * ToyFactoryType) elfDoWork(elf * ElfType, mutex * sync.RWMutex) bool {
 	return true
 }
 
-func (tf * ToyFactoryType) runElfBehavior(elf * ElfType,
+func (tf * ToyFactoryType) runElfBehavior(elf * elves.ElfType,
 	mutex * sync.RWMutex) {
 	var working bool
 	var t0 time.Time
 	var t2s float64
 
-	elf.is_working = true
+	elf.SetWorking(true)
 	working = false
 	for {
-		if (elf.is_working) {
+		if (elf.IsWorking()) {
 			if (!working) {
 				t2s = MinBuildTime + rand.Float64() *
 					(MaxBuildTime - MinBuildTime)
@@ -161,27 +147,22 @@ func (tf * ToyFactoryType) runElfBehavior(elf * ElfType,
 				}
 			}
 		} else {
-			elf.waitForHelp(mutex)
+			elf.WaitForHelp(mutex)
 		}
 	}
 }
 
 func (tf * ToyFactoryType) initElves(mutex * sync.RWMutex) {
 
-	for i:= 0; i < elves.NElvesBattalions; i++ {
-		tf.elves.battalions[i].Init()
-	}
+	tf.elves.Init()
 
-	for i := 0; i < NElves; i++ {
-		// Init one elve:
+	for i := 0; i < elves.NElvesBattalions; i++ {
 
-		tf.elves[i].mutex = new(sync.RWMutex)
-		tf.elves[i].problems = false
-		tf.elves[i].is_working = false
+		for j := 0; j < elves.NElvesBattalion; j++ {
+			// Run the elf behavior:
 
-		// Run its behavior:
-
-		go tf.runElfBehavior(&tf.elves[i], mutex)
+			go tf.runElfBehavior(&tf.elves.Battalions[i].Elves[j], mutex)
+		}
 	}
 }
 
