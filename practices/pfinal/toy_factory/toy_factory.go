@@ -45,7 +45,7 @@ func toyFails() (failure bool) {
 
 func (tf * ToyFactoryType) helpToElves(mutex * sync.RWMutex) {
 	var t2s float64
-	var elves [elves.NElvesBattalion]elves.ElfType
+	var w_elves [] chan struct{}
 	var counter int32
 
 	// Wait for finish the current job:
@@ -62,21 +62,24 @@ func (tf * ToyFactoryType) helpToElves(mutex * sync.RWMutex) {
 	// Delete 'ElvesGroup' elves from problems:
 
 	mutex.RLock()
-	elves = tf.elves
+	w_elves = tf.elves.Waiting_elves
 	mutex.RUnlock()
 
 	counter = 0
-	for i, elf := range elves {
+	for _, c := range w_elves {
 		if (counter == ElvesGroup) {
 			break
 		}
-		if (elf.problems) {
-			elf.mutex.Lock()
-			tf.elves[i].problems = false
-			elf.mutex.Unlock()
-			counter++
-		}
+		c <- struct{}{}
+
+		counter++
 	}
+
+	mutex.Lock()
+	for i := ElvesGroup - 1; i < len(w_elves); i++ {
+		tf.elves.Waiting_elves[i - (ElvesGroup - 1)] = w_elves[i]
+	}
+	mutex.Unlock()
 
 	mutex.Lock()
 	tf.elves_with_problems -= 3
@@ -107,6 +110,7 @@ func (tf * ToyFactoryType) elfDoWork(
 		fmt.Println("[WARN] Toy Failed!")
 		elf.SetWorking(false)
 		elf.SetProblems(true)
+		tf.elves.AddWaitingElf(*elf, mutex)
 
 		mutex.Lock()
 		tf.elves_with_problems++
@@ -158,7 +162,7 @@ func (tf * ToyFactoryType) initElves(mutex * sync.RWMutex) {
 
 	for i := 0; i < elves.NElvesBattalions; i++ {
 
-		for j := 0; j < elves.NElvesBattalion; j++ {
+		for j := 0; j < elves.NElvesBattalion - 1; j++ {
 			// Run the elf behavior:
 
 			go tf.runElfBehavior(&tf.elves.Battalions[i].Elves[j], mutex)

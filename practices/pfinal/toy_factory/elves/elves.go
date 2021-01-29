@@ -22,22 +22,20 @@ type ElfType struct {
 	is_working bool
 	battalion int32
 	mutex * sync.RWMutex
+	wake_up_ch chan struct{}
 }
-/*
-type ElfLeaderType struct {
-	// 'true' for occupied and 'false' for empty
 
-	main_store CacheType
-}
-*/
 type ElvesBattalionType struct{
 	// leader ElfLeaderType
 	Elves [NElvesBattalion - 1]ElfType
 	cache CacheType
+	presents_to_build int32    // Presents that have to build
+	mutex * sync.RWMutex
 }
 
 type ElvesType struct {
 	Battalions [NElvesBattalions] ElvesBattalionType
+	Waiting_elves [] chan struct{}
 	main_store CacheType
 }
 
@@ -55,20 +53,21 @@ func (elves * ElvesType) Init() {
 }
 
 func (elf * ElfType) WaitForHelp(mutex * sync.RWMutex) {
-	var problems bool
 
-	elf.mutex.RLock()
-	problems = elf.problems
-	elf.mutex.RUnlock()
-
-	if (!problems) {
+	select {
+	case <- elf.wake_up_ch:
+		elf.mutex.RLock()
+		elf.problems = false
 		elf.is_working = true
+		elf.mutex.RUnlock()
 		fmt.Println("[ELF] Back to work!")
 	}
 }
 
 func (elf * ElfType) SetWorking(working bool) {
+	elf.mutex.RLock()
 	elf.is_working = working;
+	elf.mutex.RUnlock()
 }
 
 func (elf * ElfType) SetProblems(problems bool) {
@@ -79,6 +78,12 @@ func (elf * ElfType) SetProblems(problems bool) {
 
 func (elf * ElfType) IsWorking() bool {
 	return elf.is_working
+}
+
+func (elves * ElvesType) AddWaitingElf(elf ElfType, mutex * sync.RWMutex) {
+	mutex.Lock()
+	elves.Waiting_elves = append(elves.Waiting_elves, elf.wake_up_ch)
+	mutex.Unlock()
 }
 
 /*
@@ -93,16 +98,21 @@ func (battalion * ElvesBattalionType) initBattalion(n_bat int32)  {
 	// Initialize the battalion cache as empty:
 
 	battalion.cache.setAll(false)
+
+	// Number of present to build start being 0:
+	battalion.presents_to_build = 0
+	battalion.mutex = new(sync.RWMutex)
 }
 
 func initElves(elves [] ElfType, n_bat int32) {
-	for i := 0; i < NElvesBattalion; i++ {
+	for i := 0; i < NElvesBattalion - 1; i++ {
 		// Init one elve:
 
 		elves[i].mutex = new(sync.RWMutex)
 		elves[i].problems = false
 		elves[i].is_working = false
 		elves[i].battalion = n_bat
+		elves[i].wake_up_ch = make(chan struct{}, 1)
 	}
 }
 
