@@ -236,7 +236,6 @@ func (elves * ElvesType) runLeaderBehavior() {
 		// Write data on caches
 
 		elves.writeOnChaches(row, col)
-		fmt.Println("ññññññññññññññññññññññññññññññññññ")
 		// Sleep the necessary time:
 
 		t2s = LeaderMinInterval + rand.Float64() *
