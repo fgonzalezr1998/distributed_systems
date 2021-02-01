@@ -31,18 +31,14 @@ type ElfType struct {
 	is_working bool
 	battalion int32
 	mutex * sync.RWMutex
-
 	// Channel to wake up the elf after a failure:
 
 	wake_up_ch chan struct{}
 }
 
 type ElvesBattalionType struct{
-	// leader ElfLeaderType
 	Elves [NElvesBattalion - 1]ElfType
 	cache CacheType    // Cache
-	presents_to_build int32    // Presents that have to build
-	mutex * sync.RWMutex
 }
 
 type ElvesType struct {
@@ -68,6 +64,8 @@ func (elves * ElvesType) Init(presents_finished_ch chan struct{}) {
 	elves.main_store.mutex = new(sync.RWMutex)
 	elves.main_store_empty_ch = presents_finished_ch
 	elves.Start_working_ch = make(chan struct{})
+
+	(*main_store_readings) = 0
 	for i := 0; i < NElvesBattalions ; i++ {
 		elves.Battalions[i].initBattalion(int32(i))
 
@@ -107,6 +105,8 @@ func (elf * ElfType) IsWorking() bool {
 }
 
 func (elf * ElfType) GetBattalion() int32 {
+	// Return de battalion index
+
 	return elf.battalion
 }
 
@@ -123,6 +123,8 @@ func (elves * ElvesType) AddWaitingElf(elf ElfType, mutex * sync.RWMutex) {
  */
 
 func rowUsed(row int32, used_rows [] int32) bool {
+	// Returns if the 'row' row have already been used
+
 	for _, r := range used_rows {
 		if (r == row) {
 			return true
@@ -132,7 +134,7 @@ func rowUsed(row int32, used_rows [] int32) bool {
 }
 
 func emptyMem(row, col int32, main_store CacheType) bool {
-	// Return if main_store[row][col] is empty
+	// Returns if main_store[row][col] is empty
 
 	defer main_store.mutex.Unlock()
 	main_store.mutex.Lock()
@@ -141,6 +143,8 @@ func emptyMem(row, col int32, main_store CacheType) bool {
 }
 
 func randomRow(used_rows [] int32) int32 {
+	// Returns a random row
+
 	var r int32
 
 	r = int32(rand.Intn(CacheRows))
@@ -151,6 +155,8 @@ func randomRow(used_rows [] int32) int32 {
 }
 
 func randomCol(row int32, main_store CacheType) int32 {
+	// Returns a random column
+
 	var i, col int32
 
 	col = int32(rand.Intn(CacheCols))
@@ -186,11 +192,13 @@ func initElves(elves [] ElfType, n_bat int32) {
 }
 
 func (battalion * ElvesBattalionType) DeleteOneFromCache() {
+	// Delete one element from the battalion cache
+
 	var i, j int
 	var finish bool
 	i = 0
 	finish = false
-	battalion.cache.mutex.RLock()
+	battalion.cache.mutex.Lock()
 	for (i < CacheRows && !finish) {
 		j = 0
 		for (j < CacheCols && !finish) {
@@ -204,7 +212,7 @@ func (battalion * ElvesBattalionType) DeleteOneFromCache() {
 			i++
 		}
 	}
-	battalion.cache.mutex.RUnlock()
+	battalion.cache.mutex.Unlock()
 	if (finish) {
 		battalion.cache.setAs(int32(i), int32(j), false)
 		fmt.Printf("[WARN] (%d, %d) Deleted from Cache!\n", i, j)
@@ -218,11 +226,6 @@ func (battalion * ElvesBattalionType) initBattalion(n_bat int32)  {
 
 	battalion.cache.setAll(false)
 	battalion.cache.mutex = new(sync.RWMutex)
-
-	// Number of present to build start being 0:
-
-	battalion.presents_to_build = 0
-	battalion.mutex = new(sync.RWMutex)
 }
 
 func (cache * CacheType) setAll(occupied bool) {
@@ -235,6 +238,7 @@ func (cache * CacheType) setAll(occupied bool) {
 
 func (cache * CacheType) setAs(row, col int32, occupied bool) {
 	// Set data 'occupied' at (row,col) position
+
 	cache.mutex.Lock()
 	cache.elems[row][col] = occupied
 	cache.mutex.Unlock()
@@ -257,7 +261,6 @@ func (elves * ElvesType) runLeaderBehavior(mem_readings * int32,
 	i = 0
 	for {
 		mutex.RLock()
-		fmt.Println(*mem_readings)
 		if (*mem_readings == CacheRows * CacheCols) {
 			elves.main_store_empty_ch <- struct{}{}
 			break
