@@ -260,6 +260,7 @@ func (elves * ElvesType) runLeaderBehavior(mem_readings * int32,
 		fmt.Println(*mem_readings)
 		if (*mem_readings == CacheRows * CacheCols) {
 			elves.main_store_empty_ch <- struct{}{}
+			break
 		}
 		mutex.RUnlock()
 		if (i == CacheRows - 1) {

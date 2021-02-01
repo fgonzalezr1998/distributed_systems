@@ -1,2 +1,0 @@
-- toy_factory.go:
-    - helpToElves
