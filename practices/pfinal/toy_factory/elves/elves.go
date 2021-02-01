@@ -17,8 +17,9 @@ const CacheCols = 30;
 
 // Interval that leader get a present from the main store
 
-const LeaderMinInterval = 2.0;
-const LeaderMaxInterval = 4.0;
+const LeaderMinInterval = 5.5; // 1.0
+const LeaderMaxInterval = 8.5; // 2.0
+
 
 type CacheType struct {
 	mutex * sync.RWMutex
@@ -30,6 +31,7 @@ type ElfType struct {
 	is_working bool
 	battalion int32
 	mutex * sync.RWMutex
+
 	// Channel to wake up the elf after a failure:
 
 	wake_up_ch chan struct{}
@@ -47,6 +49,8 @@ type ElvesType struct {
 	Battalions [NElvesBattalions] ElvesBattalionType
 	Waiting_elves [] chan struct{}
 	main_store CacheType	// Main memory
+	main_store_empty_ch chan struct{}
+	Start_working_ch chan struct{}
 }
 
 /*
@@ -55,17 +59,22 @@ type ElvesType struct {
  **********************
  */
 
-func (elves * ElvesType) Init() {
+func (elves * ElvesType) Init(presents_finished_ch chan struct{}) {
+
+	var main_store_readings * int32 = new(int32)
+	var mutex * sync.RWMutex = new(sync.RWMutex)
+
 	elves.main_store.setAll(true)
 	elves.main_store.mutex = new(sync.RWMutex)
+	elves.main_store_empty_ch = presents_finished_ch
+	elves.Start_working_ch = make(chan struct{})
 	for i := 0; i < NElvesBattalions ; i++ {
 		elves.Battalions[i].initBattalion(int32(i))
 
 		// Run leader behavior as Go routine:
 
-		
+		go elves.runLeaderBehavior(main_store_readings, mutex)	
 	}
-	go elves.runLeaderBehavior()
 }
 
 func (elf * ElfType) WaitForHelp(mutex * sync.RWMutex) {
@@ -76,7 +85,8 @@ func (elf * ElfType) WaitForHelp(mutex * sync.RWMutex) {
 		elf.problems = false
 		elf.is_working = true
 		elf.mutex.RUnlock()
-		fmt.Println("[ELF] Back to work!")
+		fmt.Printf("[ELF] From Batallion %d, Back to work!\n",
+			elf.battalion + 1)
 	}
 }
 
@@ -94,6 +104,10 @@ func (elf * ElfType) SetProblems(problems bool) {
 
 func (elf * ElfType) IsWorking() bool {
 	return elf.is_working
+}
+
+func (elf * ElfType) GetBattalion() int32 {
+	return elf.battalion
 }
 
 func (elves * ElvesType) AddWaitingElf(elf ElfType, mutex * sync.RWMutex) {
@@ -151,7 +165,6 @@ func randomCol(row int32, main_store CacheType) int32 {
 	i = col
 	for (i < CacheCols && emptyMem(row, i, main_store)) {
 		i++
-		fmt.Println("****[DEBUG] Estoy aqui****")
 	}
 
 	if (i == CacheCols) {
@@ -169,6 +182,32 @@ func initElves(elves [] ElfType, n_bat int32) {
 		elves[i].is_working = false
 		elves[i].battalion = n_bat
 		elves[i].wake_up_ch = make(chan struct{}, 1)
+	}
+}
+
+func (battalion * ElvesBattalionType) DeleteOneFromCache() {
+	var i, j int
+	var finish bool
+	i = 0
+	finish = false
+	battalion.cache.mutex.RLock()
+	for (i < CacheRows && !finish) {
+		j = 0
+		for (j < CacheCols && !finish) {
+			finish = battalion.cache.elems[i][j]
+			if (!finish) {
+				j++
+			}
+		}
+
+		if (!finish) {
+			i++
+		}
+	}
+	battalion.cache.mutex.RUnlock()
+	if (finish) {
+		battalion.cache.setAs(int32(i), int32(j), false)
+		fmt.Printf("[WARN] (%d, %d) Deleted from Cache!\n", i, j)
 	}
 }
 
@@ -202,18 +241,27 @@ func (cache * CacheType) setAs(row, col int32, occupied bool) {
 }
 
 func (elves * ElvesType) writeOnChaches(row, col int32) {
+	fmt.Printf("[WARN] Writing over (%d, %d) on caches\n", row, col)
 	for i := 0; i < NElvesBattalions; i++ {
 		elves.Battalions[i].cache.setAs(row, col, true)
+		elves.Start_working_ch <- struct{}{}
 	}
 }
 
-func (elves * ElvesType) runLeaderBehavior() {
+func (elves * ElvesType) runLeaderBehavior(mem_readings * int32,
+	mutex * sync.RWMutex) {
 	var used_rows []int32
 	var row, col, i int32
-	var t2s float64 
+	var t2s float64
 
 	i = 0
 	for {
+		mutex.RLock()
+		fmt.Println(*mem_readings)
+		if (*mem_readings == CacheRows * CacheCols) {
+			elves.main_store_empty_ch <- struct{}{}
+		}
+		mutex.RUnlock()
 		if (i == CacheRows - 1) {
 			used_rows = used_rows[:0]	// Clear slice
 			i = 0
@@ -232,10 +280,14 @@ func (elves * ElvesType) runLeaderBehavior() {
 		// Set position as empty because the data was readen
 
 		elves.main_store.setAs(row, col, false)
+		mutex.Lock()
+		(*mem_readings)++
+		mutex.Unlock()
 
 		// Write data on caches
 
 		elves.writeOnChaches(row, col)
+
 		// Sleep the necessary time:
 
 		t2s = LeaderMinInterval + rand.Float64() *

@@ -7,11 +7,15 @@ import (
 	"./toy_factory"
 )
 
-func wait_for_end(time_to_deal_ch chan struct{}) {
+func wait_for_end(time_to_deal_ch chan struct{},
+	presents_finished_ch chan struct{}) {
 	for {
 		select {
 			case <- time_to_deal_ch:
 				fmt.Println("[INFO] TIME TO DEAL!")
+				os.Exit(0)
+			case <- presents_finished_ch:
+				fmt.Println("[INFO] ALL PRESENTS HAVE BEEN FINISHED!")
 				os.Exit(0)
 		}
 	}
@@ -24,5 +28,5 @@ func main() {
 
 	toy_factory.Init(&mutex)	// Initialize the Toy Factory
 
-	wait_for_end(toy_factory.Time_to_deal_ch)
+	wait_for_end(toy_factory.Time_to_deal_ch, toy_factory.Presents_finished_ch)
 }

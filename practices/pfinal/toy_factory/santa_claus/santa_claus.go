@@ -27,9 +27,10 @@ func (sc * SantaClausType) IsWorking() bool {
 }
 
 func (sc * SantaClausType) WakeUp() {
-	if (!sc.IsWorking()) {
-		fmt.Println("Wake up to Santa!")
-		sc.Elv_ch <- struct{}{}
+	fmt.Println("Wake up to Santa!")
+	sc.Elv_ch <- struct{}{}
+	if (sc.IsWorking()) {
+		fmt.Println("[INFO] Santa is already working")
 	}
 }
 
